@@ -38,6 +38,8 @@ namespace _2gisTestingApi
         [TestCase("НОВОСИБИРСК")]
         [TestCase("новосибирск")]
         [TestCase("Ош")]
+        [TestCase("Санкт-Петербург")]
+
         public async Task RegionFindTest(string name)
         {
             using (HttpClient client = new HttpClient { BaseAddress = new Uri(_baseUri) })
@@ -51,21 +53,25 @@ namespace _2gisTestingApi
                     var items = result["items"];
                     var count = items.Count();
                     var item = items.First;
-                    //var uppername = name.ToUpper();
+                   
                     var regionName = item["name"].Value<string>();
-              
-
                     Assert.AreEqual(1, count);
                     Assert.AreEqual(name.ToUpper(), regionName.ToUpper());
+                    
                 }
             }
 
         }
 
+        [TestCase(" ")]
+        [TestCase("")]
+        [TestCase("абракадабра")]
         [TestCase("qwerty")]
         [TestCase("1234")]
         [TestCase("novosibirsk")]
-        public async Task RegionFindSubstTest(string name)
+
+
+        public async Task RegionFindIncorrectTest(string name)
         {
             using (HttpClient client = new HttpClient { BaseAddress = new Uri(_baseUri) })
             {
@@ -77,54 +83,59 @@ namespace _2gisTestingApi
                     var result = JObject.Parse(json);
                     var items = result["items"];
                     var count = items.Count();
-                    //var item = items.First;
-                    // var regionName = item["name"].Value<string>();
-
                     Assert.AreEqual(0, count);
-                    //  Assert.AreEqual("Новосибирск", regionName);
+                    return;
+
+                }
+
+                Assert.Fail("500 Internal Server Error");
+            }
+
+        }
+
+     
+
+
+
+        [Test, Combinatorial]
+              
+        public async Task CountryCodeFindTest([Values("ru", "kz","ua", "cz","kg")] string code, [Values(5, 10, 15)] int pageSize)
+        {
+            using (HttpClient client = new HttpClient { BaseAddress = new Uri(_baseUri) })
+            {
+                var response = await client.GetAsync(string.Format("?country_code={0}&page_size={1}", code, pageSize));
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var obj = JObject.Parse(json);
+                    var items = obj["items"];
+                    var count = items.Count();
+                    Assert.LessOrEqual(count , pageSize);
+
+                    var result = true;
+                    foreach(var item in items)
+                    {
+                        var country = item["country"];
+                        var countryCode = country["code"].Value<String>();
+                        if (countryCode!= code)
+                        {
+                            result = false;
+                            break;
+                        }
+                    }
+
+
+                    Assert.IsTrue(result);
 
                 }
             }
 
         }
 
-       
+        [Test, Combinatorial]
 
-        //[TestCase("ru")]
-        //[TestCase("RU")]
-        //[TestCase("novosibirsk")]
-        //public async Task CountryCodeFindTest(string code)
-        //{
-        //    using (HttpClient client = new HttpClient { BaseAddress = new Uri(_baseUri) })
-        //    {
-        //        var response = await client.GetAsync(string.Format("?countryCode={0}", code)
-
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var json = await response.Content.ReadAsStringAsync();
-        //            var result = JObject.Parse(json);
-        //            var items = result["country"];
-        //            var count = items.Count();
-
-        //            for (int i = 0; i< count; i++)
-        //            { 
-        //                var item = items.First;
-        //                var countryCode= item["code"].Value<string>();
-        //            }
-
-
-        //            Assert.AreEqual(13, count);
-        //            Assert.AreEqual(code, countryCode);
-
-        //        }
-        //    }
-
-        //}
-
-        [TestCase("5")]
-        [TestCase("10")]
-        [TestCase("15")]
-        public async Task PageSizeTest(string pageSize)
+        public async Task PageSizeTest([Values(5, 10, 15)] int pageSize)
         {
             using (HttpClient client = new HttpClient { BaseAddress = new Uri(_baseUri) })
             {
@@ -133,30 +144,12 @@ namespace _2gisTestingApi
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
-                    var result = JObject.Parse(json);
-                    var items = result["items"];
+                    var obj = JObject.Parse(json);
+                    var items = obj["items"];
                     var count = items.Count();
-                    //var item = items.First;
-                    // var regionName = item["name"].Value<string>();
+                    Assert.LessOrEqual(count, pageSize);
 
-                    if (pageSize=="5")
-                    {
-                        Assert.AreEqual(5, count);
-                    }
-
-                    if (pageSize=="10")
-                    {
-                        Assert.Equals(10, count);
-                    }
-
-                    if (pageSize == "15")
-                    {
-                        Assert.Equals(15, count);
-                    }
-
-                    //Assert.AreEqual(0, count);
-                    //  Assert.AreEqual("Новосибирск", regionName);
-
+                    
                 }
             }
 
